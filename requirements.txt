@@ -1,9 +1,8 @@
-sys
 requests
-BeautifulSoup
-urlparse
-urljoin
+bs4
+urllib.parse
 re
 argparse
 validators
 deque
+collections
