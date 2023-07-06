@@ -3,7 +3,6 @@
 # Author: Kevin Riley - July, 2023
 # Requires Python3
 
-
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
@@ -11,6 +10,7 @@ import re
 import argparse
 import validators
 import sys
+from collections import deque
 
 def validate_url(url):
     if not validators.url(url):
@@ -25,7 +25,7 @@ parser.add_argument('url', type=validate_url, help='The URL to scrape')
 parser.add_argument('-min', '--min_length', type=int, default=1, help='The minimum word length')
 parser.add_argument('-max', '--max_length', type=int, default=sys.maxsize, help='The maximum word length')
 parser.add_argument('-o', '--output', type=str, default='wordlist.txt', help='The output file name')
-parser.add_argument('-l', '--limit', type=int, default=50, help='The maximum number of pages to scrape')
+parser.add_argument('-l', '--limit', type=int, default=3, help='The maximum number of levels to follow')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -45,14 +45,17 @@ if response.status_code == 200:
     # Create a BeautifulSoup object and specify the parser
     soup = BeautifulSoup(content, 'html.parser')
 
-    # Create a set to hold the unique words and links
+    # Create a set to hold the unique words and a queue for links to visit
     unique_words = set()
-    links_to_visit = set([url])
+    links_to_visit = deque([(url, 0)])  # each item is a tuple (url, depth)
     visited_links = set()
 
-    while links_to_visit and len(visited_links) < args.limit:
-        current_url = links_to_visit.pop()
+    while links_to_visit:
+        current_url, depth = links_to_visit.popleft()
         visited_links.add(current_url)
+
+        if depth > args.limit:
+            continue
 
         response = requests.get(current_url)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -77,7 +80,7 @@ if response.status_code == 200:
             # If the new URL's domain ends with the base URL's domain
             # and it's not in the visited_links set, add it to the links_to_visit set
             if parsed_new_url.netloc.endswith(base_url) and new_url not in visited_links:
-                links_to_visit.add(new_url)
+                links_to_visit.append((new_url, depth + 1))
 
     print(f"Found {len(unique_words)} unique words")
 
@@ -87,4 +90,4 @@ if response.status_code == 200:
             f.write(word + '\n')
 
 else:
-    print(f"Failed to connect {url}. Status code: {response.status_code}")
+    print(f"Failed to scrape {url}. Status code: {response.status_code}")
