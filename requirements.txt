@@ -1,1 +1,9 @@
 sys
+requests
+BeautifulSoup
+urlparse
+urljoin
+re
+argparse
+validators
+
