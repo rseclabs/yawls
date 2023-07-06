@@ -59,8 +59,8 @@ if response.status_code == 200:
         if args.verbose:
             print(f"Following link: {current_url}")
 
-        if depth > args.limit: 
-            continue
+        #if depth > args.limit: 
+        #    continue
 
         response = requests.get(current_url)
         soup = BeautifulSoup(response.content, 'html.parser')
