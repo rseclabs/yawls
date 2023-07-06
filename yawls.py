@@ -26,8 +26,9 @@ parser.add_argument('url', type=validate_url, help='The URL to scrape')
 parser.add_argument('-min', '--min_length', type=int, default=1, help='The minimum word length')
 parser.add_argument('-max', '--max_length', type=int, default=sys.maxsize, help='The maximum word length')
 parser.add_argument('-o', '--output', type=str, default='wordlist.txt', help='The output file name')
-#parser.add_argument('-l', '--limit', type=int, default=1, help='The maximum number of levels to follow') <== doesn't seem to work as expecteded
+parser.add_argument('-l', '--limit', type=int, default=3, help='The maximum number of levels to follow')
 parser.add_argument('-v', '--verbose', action='store_true', help='Print out each link being followed')
+parser.add_argument('-e', '--email', action='store_true', help='Discover and parse email addresses found on the web pages')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -59,14 +60,22 @@ if response.status_code == 200:
         if args.verbose:
             print(f"Following link: {current_url}")
 
-        #if depth > args.limit: 
-        #    continue
+        if depth > args.limit: 
+            continue
 
         response = requests.get(current_url)
         soup = BeautifulSoup(response.content, 'html.parser')
+        if args.email:
+        # Find all email addresses on the page
+            email_addresses = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', text)
 
-        # Get all the text
-        text = soup.get_text()
+        # Write the email addresses to a separate file
+            with open('emails.txt', 'a', encoding='utf-8') as f:
+                for email in email_addresses:
+                    f.write(email + '\n')
+               
+         # Get all the text
+         text = soup.get_text()
 
         # Get all the words in the text
         words = re.findall('\w+', text)
