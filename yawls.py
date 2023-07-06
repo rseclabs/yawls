@@ -4,6 +4,7 @@
 # Requires Python3
 
 import requests
+import string
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import re
@@ -25,7 +26,8 @@ parser.add_argument('url', type=validate_url, help='The URL to scrape')
 parser.add_argument('-min', '--min_length', type=int, default=1, help='The minimum word length')
 parser.add_argument('-max', '--max_length', type=int, default=sys.maxsize, help='The maximum word length')
 parser.add_argument('-o', '--output', type=str, default='wordlist.txt', help='The output file name')
-parser.add_argument('-l', '--limit', type=int, default=3, help='The maximum number of levels to follow')
+#parser.add_argument('-l', '--limit', type=int, default=1, help='The maximum number of levels to follow') <== doesn't seem to work as expecteded
+parser.add_argument('-v', '--verbose', action='store_true', help='Print out each link being followed')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -54,7 +56,10 @@ if response.status_code == 200:
         current_url, depth = links_to_visit.popleft()
         visited_links.add(current_url)
 
-        if depth > args.limit:
+        if args.verbose:
+            print(f"Following link: {current_url}")
+
+        if depth > args.limit: 
             continue
 
         response = requests.get(current_url)
@@ -68,8 +73,8 @@ if response.status_code == 200:
 
         # Process each word
         for word in words:
-            # Filter out words that are too short or too long and add them to the set
-            if args.min_length <= len(word) <= args.max_length:
+            # Filter out words that are too short, too long, or contain non-ASCII characters and add them to the set
+            if args.min_length <= len(word) <= args.max_length and all(char in string.ascii_letters for char in word):
                 unique_words.add(word)
 
         # Find all the links on the page
@@ -84,10 +89,18 @@ if response.status_code == 200:
 
     print(f"Found {len(unique_words)} unique words")
 
-    # Write the unique words to the specified output file
-    with open(args.output, 'w') as f:
-        for word in unique_words:
-            f.write(word + '\n')
+    # sort the unique words by length (descending) and then alphabetically
+    sorted_words = sorted(unique_words, key=lambda word: (-len(word), word), reverse=True)
+
+    # Write the sorted words to the specified output file
+    with open(args.output, 'w', encoding='utf-8') as f:
+        for word in sorted_words:
+            try:
+             # try encoding and decoding the word
+                word.encode('utf-8').decode('utf-8')
+                f.write(word + '\n')
+            except UnicodeError:
+                print(f"Skipping word: {word} - Cannot be encoded or decoded")
 
 else:
     print(f"Failed to scrape {url}. Status code: {response.status_code}")
