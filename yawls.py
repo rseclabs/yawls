@@ -87,4 +87,4 @@ if response.status_code == 200:
             f.write(word + '\n')
 
 else:
-    print(f"Failed to scrape {url}. Status code: {response.status_code}")
+    print(f"Failed to connect {url}. Status code: {response.status_code}")
